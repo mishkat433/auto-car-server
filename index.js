@@ -2,7 +2,8 @@ require('dotenv').config()
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { query } = require('express');
 const PORT = process.env.PORT || 5200;
 
 app.use(cors());
@@ -19,6 +20,7 @@ app.get("/", (req, res) => {
 const run = async () => {
     try {
         const productCollection = client.db("autoCar").collection("product");
+        const adminCollection = client.db("autoCar").collection("admin");
 
         app.get("/products", async (req, res) => {
             const query = {}
@@ -29,12 +31,55 @@ const run = async () => {
 
         app.post("/admin/addProduct", async (req, res) => {
             const product = req.body
-            console.log(product);
             const result = await productCollection.insertOne(product)
             res.send(result)
         })
 
+        app.put("/productUpdate/:id", async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const product = req.body;
+            const option = { upsert: true };
+            const updateProduct = {
+                $set: {
+                    name: product.name,
+                    price: product.price,
+                    photo: product.photo
+                }
+            }
+            const result = await productCollection.updateOne(filter, updateProduct, option)
+            res.send(result);
+        })
 
+        app.delete("/delete/:id", async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await productCollection.deleteOne(filter);
+            res.send(result);
+        })
+
+        // -------------------------- Admin section -----------------------------------
+
+        app.get("/admin", async (req, res) => {
+            const query = {}
+            const result = adminCollection.find(query);
+            const product = await result.toArray();
+            res.send(product)
+        })
+
+        app.post("/admin/addAdmin", async (req, res) => {
+            const admin = req.body
+            const result = await adminCollection.insertOne(admin)
+            res.send(result)
+        })
+
+        app.delete("/admin/delete/:id", async (req, res) => {
+            const id = req.params.id;
+            console.log(id);
+            const filter = { _id: ObjectId(id) };
+            const result = await adminCollection.deleteOne(filter);
+            res.send(result);
+        })
 
     }
     finally { }
