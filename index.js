@@ -20,6 +20,7 @@ app.get("/", (req, res) => {
 const run = async () => {
     try {
         const productCollection = client.db("autoCar").collection("product");
+        const serviceCollection = client.db("autoCar").collection("services");
         const adminCollection = client.db("autoCar").collection("admin");
 
         app.get("/products", async (req, res) => {
@@ -51,18 +52,58 @@ const run = async () => {
             res.send(result);
         })
 
-        app.delete("/delete/:id", async (req, res) => {
+        app.delete("/product/delete/:id", async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const result = await productCollection.deleteOne(filter);
             res.send(result);
         })
 
+        // -------------------------- service -----------------------------------------
+
+        app.get("/services", async (req, res) => {
+            const query = {}
+            const result = serviceCollection.find(query);
+            const product = await result.toArray();
+            res.send(product)
+        })
+
+        app.post("/admin/addServices", async (req, res) => {
+            const product = req.body
+            const result = await serviceCollection.insertOne(product)
+            res.send(result)
+        })
+
+        // app.put("/productUpdate/:id", async (req, res) => {
+        //     const id = req.params.id;
+        //     const filter = { _id: ObjectId(id) };
+        //     const product = req.body;
+        //     const option = { upsert: true };
+        //     const updateProduct = {
+        //         $set: {
+        //             name: product.name,
+        //             price: product.price,
+        //             photo: product.photo
+        //         }
+        //     }
+        //     const result = await productCollection.updateOne(filter, updateProduct, option)
+        //     res.send(result);
+        // })
+
+        // app.delete("/delete/:id", async (req, res) => {
+        //     const id = req.params.id;
+        //     const filter = { _id: ObjectId(id) };
+        //     const result = await productCollection.deleteOne(filter);
+        //     res.send(result);
+        // })
+
+
+
         // -------------------------- Admin section -----------------------------------
 
         app.get("/admin", async (req, res) => {
-            const query = {}
-            const result = adminCollection.find(query);
+            const findAdmin = { email: req.query.email }
+            const result = adminCollection.find(findAdmin);
             const product = await result.toArray();
             res.send(product)
         })
