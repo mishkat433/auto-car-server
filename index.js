@@ -61,8 +61,11 @@ const run = async () => {
 
         // -------------------------- service -----------------------------------------
 
-        app.get("/services", async (req, res) => {
-            const query = {}
+        app.get("/services/:id", async (req, res) => {
+            let query = {}
+            if (req.params.id) {
+                query = { _id: ObjectId(req.params.id) }
+            }
             const result = serviceCollection.find(query);
             const product = await result.toArray();
             res.send(product)
@@ -74,36 +77,39 @@ const run = async () => {
             res.send(result)
         })
 
-        // app.put("/productUpdate/:id", async (req, res) => {
-        //     const id = req.params.id;
-        //     const filter = { _id: ObjectId(id) };
-        //     const product = req.body;
-        //     const option = { upsert: true };
-        //     const updateProduct = {
-        //         $set: {
-        //             name: product.name,
-        //             price: product.price,
-        //             photo: product.photo
-        //         }
-        //     }
-        //     const result = await productCollection.updateOne(filter, updateProduct, option)
-        //     res.send(result);
-        // })
+        app.put("/servideUpdate/:id", async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const product = req.body;
+            const option = { upsert: true };
+            const updateProduct = {
+                $set: {
+                    name: product.name,
+                    price: product.price,
+                    photo: product.photo
+                }
+            }
+            const result = await productCollection.updateOne(filter, updateProduct, option)
+            res.send(result);
+        })
 
-        // app.delete("/delete/:id", async (req, res) => {
-        //     const id = req.params.id;
-        //     const filter = { _id: ObjectId(id) };
-        //     const result = await productCollection.deleteOne(filter);
-        //     res.send(result);
-        // })
+        app.delete("/services/delete/:id", async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await productCollection.deleteOne(filter);
+            res.send(result);
+        })
 
 
 
         // -------------------------- Admin section -----------------------------------
 
         app.get("/admin", async (req, res) => {
-            const findAdmin = { email: req.query.email }
-            const result = adminCollection.find(findAdmin);
+            let query = {}
+            if (req.query.email) {
+                query = { email: req.query.email }
+            }
+            const result = adminCollection.find(query);
             const product = await result.toArray();
             res.send(product)
         })
