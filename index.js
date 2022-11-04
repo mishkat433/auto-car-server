@@ -1,6 +1,7 @@
 require('dotenv').config()
 const express = require("express");
 const app = express();
+const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const { query } = require('express');
@@ -17,11 +18,34 @@ app.get("/", (req, res) => {
 })
 
 
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: 'unauthorized access' });
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.JWT_SECRET_KEY, function (err, decoded) {
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden access' });
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
+
 const run = async () => {
     try {
         const productCollection = client.db("autoCar").collection("product");
         const serviceCollection = client.db("autoCar").collection("services");
+        const appointmentCollection = client.db("autoCar").collection("appointment");
         const adminCollection = client.db("autoCar").collection("admin");
+
+        // jwt token
+        app.post('/jwt', (req, res) => {
+            const user = req.body
+            const token = jwt.sign(user, process.env.JWT_SECRET_KEY, { expiresIn: "1d" })
+            res.send({ token })
+        })
 
         app.get("/products", async (req, res) => {
             const query = {}
@@ -61,14 +85,19 @@ const run = async () => {
 
         // -------------------------- service -----------------------------------------
 
-        app.get("/services/:id", async (req, res) => {
+        app.get("/services", async (req, res) => {
             let query = {}
-            if (req.params.id) {
-                query = { _id: ObjectId(req.params.id) }
-            }
             const result = serviceCollection.find(query);
             const product = await result.toArray();
             res.send(product)
+        })
+
+        app.get("/singleServices/:id", async (req, res) => {
+
+            let query = { _id: ObjectId(req.params.id) }
+            const result = serviceCollection.find(query);
+            const service = await result.toArray();
+            res.send(service)
         })
 
         app.post("/admin/addServices", async (req, res) => {
@@ -89,16 +118,50 @@ const run = async () => {
                     photo: product.photo
                 }
             }
-            const result = await productCollection.updateOne(filter, updateProduct, option)
+            const result = await serviceCollection.updateOne(filter, updateProduct, option)
             res.send(result);
         })
 
         app.delete("/services/delete/:id", async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
-            const result = await productCollection.deleteOne(filter);
+            const result = await serviceCollection.deleteOne(filter);
             res.send(result);
         })
+
+        // -------------------------- appoinment section -----------------------------------
+
+        app.get("/appointment", verifyJWT, async (req, res) => {
+            const decoded = req.decoded;
+            if (decoded.email !== req.query.email) {
+                res.status(403).send({ message: "unauthorized access" })
+            }
+
+            let query = {}
+            if (req.query.email) {
+                query = {
+                    email: req.query.email
+                }
+            }
+            const cursor = appointmentCollection.find(query);
+            const appointment = await cursor.toArray();
+            res.send(appointment);
+        })
+
+        app.post("/postAppointment", async (req, res) => {
+            const product = req.body
+            const result = await appointmentCollection.insertOne(product)
+            res.send(result)
+        })
+
+        app.delete("/deleteAppointment/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const cursor = await appointmentCollection.deleteOne(query);
+            res.send(cursor)
+            console.log(cursor);
+        })
+
 
 
 
