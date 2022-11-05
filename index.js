@@ -43,7 +43,7 @@ const run = async () => {
         // jwt token
         app.post('/jwt', (req, res) => {
             const user = req.body
-            const token = jwt.sign(user, process.env.JWT_SECRET_KEY, { expiresIn: "1d" })
+            const token = jwt.sign(user, process.env.JWT_SECRET_KEY, { expiresIn: "1h" })
             res.send({ token })
         })
 
@@ -133,8 +133,10 @@ const run = async () => {
 
         app.get("/appointment", verifyJWT, async (req, res) => {
             const decoded = req.decoded;
-            if (decoded.email !== req.query.email) {
-                res.status(403).send({ message: "unauthorized access" })
+            if (req.query.email) {
+                if (decoded.email !== req.query.email) {
+                    res.status(403).send({ message: "unauthorized access" })
+                }
             }
 
             let query = {}
@@ -154,12 +156,24 @@ const run = async () => {
             res.send(result)
         })
 
+        app.patch("/appointmentStatus/:id", async (req, res) => {
+            const id = req.params.id;
+            const status = req.body.status;
+            const query = { _id: ObjectId(id) }
+            const updateDoc = {
+                $set: {
+                    status: status
+                }
+            }
+            const cursor = await appointmentCollection.updateOne(query, updateDoc)
+            res.send(cursor)
+        })
+
         app.delete("/deleteAppointment/:id", async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) }
             const cursor = await appointmentCollection.deleteOne(query);
             res.send(cursor)
-            console.log(cursor);
         })
 
 
